@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raipur Over Indore</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+        #image {
+            width: 300px;
+            height: 300px;
+            object-fit: cover;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Raipur Beats Indore</h1>
+    <select id="imageSelector">
+        <option value="images/raipur1.jpg">Raipur 1</option>
+        <option value="images/raipur2.jpg">Raipur 2</option>
+        <option value="images/raipur3.jpg">Raipur 3</option>
+    </select>
+    <img id="image" src="images/raipur1.jpg" alt="Selected Image">
+    <script>
+        const imageSelector = document.getElementById('imageSelector');
+        const image = document.getElementById('image');
+
+        imageSelector.addEventListener('change', function() {
+            image.src = this.value;
+        });
+    </script>
+</body>
+</html>
