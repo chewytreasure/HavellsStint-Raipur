@@ -3,38 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Images</title>
+    <title>Telegram Bot Integration Example</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body>
-    <h1>Upload Images to MEGA via Telegram Bot</h1>
+    <h1>Retailer Selection</h1>
 
-    <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
-        <label for="retailerName">Retailer Name:</label>
-        <input type="text" id="retailerName" name="retailerName" required><br><br>
+    <label for="retailerSelect">Select Retailer:</label>
+    <select id="retailerSelect">
+        <!-- Dropdown options will be populated dynamically -->
+    </select>
 
-        <label for="imageFile">Select Image File:</label>
-        <input type="file" id="imageFile" name="imageFile" required><br><br>
-
-        <button type="submit">Upload Image</button>
-    </form>
-
-    <div id="message"></div>
+    <div id="imageContainer">
+        <!-- Images will be displayed here based on selection -->
+    </div>
 
     <script>
-        const form = document.getElementById('uploadForm');
-        const messageDiv = document.getElementById('message');
+        // Function to fetch retailer names from backend and populate dropdown
+        async function fetchRetailerNames() {
+            try {
+                const response = await axios.get('/retailers'); // Replace with your backend endpoint
+                const retailers = response.data;
 
-        form.addEventListener('submit', async function(event) {
-            event.preventDefault();
+                const selectElement = document.getElementById('retailerSelect');
 
-            const formData = new FormData(form);
-            const response = await fetch('/upload', {
-                method: 'POST',
-                body: formData
-            });
+                // Clear previous options
+                selectElement.innerHTML = '';
 
-            const result = await response.text();
-            messageDiv.textContent = result;
+                // Add new options
+                retailers.forEach(retailer => {
+                    const option = document.createElement('option');
+                    option.value = retailer.name;
+                    option.textContent = retailer.name;
+                    selectElement.appendChild(option);
+                });
+
+                // Trigger image loading based on selection (optional)
+                selectElement.addEventListener('change', async function() {
+                    const selectedRetailer = this.value;
+                    await fetchImages(selectedRetailer);
+                });
+            } catch (error) {
+                console.error('Error fetching retailer names:', error);
+            }
+        }
+
+        // Function to fetch images for a selected retailer
+        async function fetchImages(retailerName) {
+            try {
+                const response = await axios.get(`/images?retailer=${encodeURIComponent(retailerName)}`); // Replace with your backend endpoint
+                const images = response.data;
+
+                const imageContainer = document.getElementById('imageContainer');
+
+                // Clear previous images
+                imageContainer.innerHTML = '';
+
+                // Add new images
+                images.forEach(image => {
+                    const imgElement = document.createElement('img');
+                    imgElement.src = image.url;
+                    imgElement.alt = image.altText;
+                    imageContainer.appendChild(imgElement);
+                });
+            } catch (error) {
+                console.error('Error fetching images:', error);
+            }
+        }
+
+        // Fetch retailer names on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            await fetchRetailerNames();
         });
     </script>
 </body>
