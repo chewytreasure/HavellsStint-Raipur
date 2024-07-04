@@ -3,35 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Raipur Over Indore</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 50px;
-        }
-        #image {
-            width: 300px;
-            height: 300px;
-            object-fit: cover;
-            margin-top: 20px;
-        }
-    </style>
+    <title>Upload Images</title>
 </head>
 <body>
-    <h1>Raipur Beats Indore</h1>
-    <select id="imageSelector">
-        <option value="images/raipur1.jpg">Raipur 1</option>
-        <option value="images/raipur2.jpg">Raipur 2</option>
-        <option value="images/raipur3.jpg">Raipur 3</option>
-    </select>
-    <img id="image" src="images/raipur1.jpg" alt="Selected Image">
-    <script>
-        const imageSelector = document.getElementById('imageSelector');
-        const image = document.getElementById('image');
+    <h1>Upload Images to MEGA via Telegram Bot</h1>
 
-        imageSelector.addEventListener('change', function() {
-            image.src = this.value;
+    <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
+        <label for="retailerName">Retailer Name:</label>
+        <input type="text" id="retailerName" name="retailerName" required><br><br>
+
+        <label for="imageFile">Select Image File:</label>
+        <input type="file" id="imageFile" name="imageFile" required><br><br>
+
+        <button type="submit">Upload Image</button>
+    </form>
+
+    <div id="message"></div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const messageDiv = document.getElementById('message');
+
+        form.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(form);
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.text();
+            messageDiv.textContent = result;
         });
     </script>
 </body>
