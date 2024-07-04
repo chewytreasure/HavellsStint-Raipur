@@ -5,7 +5,7 @@ const { Telegraf } = require('telegraf');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const BOT_TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN';
+const BOT_TOKEN = '7253315958:AAGDBGD28J0_Ud5-ruVbQhgI3xBp7qhdIPY';
 
 // Initialize Telegram bot
 const bot = new Telegraf(BOT_TOKEN);
