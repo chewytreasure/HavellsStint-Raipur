@@ -5,7 +5,7 @@ const mega = require('mega');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const BOT_TOKEN = '5923510466:AAGVdqggyVZJz6xVQUxNwLAoECNZBLc9Mwo';
+const BOT_TOKEN = '7253315958:AAGDBGD28J0_Ud5-ruVbQhgI3xBp7qhdIPY';
 const MEGA_CREDENTIALS = {
     email: 'ABM19032@IIML.AC.IN',
     password: '5AxCZia_N64q:8c'
