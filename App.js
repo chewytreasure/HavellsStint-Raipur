@@ -1,7 +1,9 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
-const { Telegraf } = require('telegraf');
+const { Telegraf, Markup } = require('telegraf');
+const https = require('https');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,18 +33,25 @@ bot.start((ctx) => {
 });
 
 // Handle messages containing retailer name
+let retailerNames = {}; // Store retailer names by chat ID
 bot.on('text', (ctx) => {
+    const chatId = ctx.chat.id;
     const retailerName = ctx.message.text;
-    console.log(`Received retailer name: ${retailerName} from chat ID: ${ctx.chat.id}`);
+    retailerNames[chatId] = retailerName;
+    console.log(`Received retailer name: ${retailerName} from chat ID: ${chatId}`);
     ctx.reply(`Retailer name '${retailerName}' received. Please upload an image for this retailer.`);
-    // Store retailerName in your database or session here
 });
 
 // Handle photo uploads
 bot.on('photo', async (ctx) => {
-    const retailerName = 'LastRetailerName'; // You'll need to implement a way to store and retrieve this
+    const chatId = ctx.chat.id;
+    const retailerName = retailerNames[chatId];
+    if (!retailerName) {
+        ctx.reply('Please enter the retailer name first.');
+        return;
+    }
     const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
-    await handleImageUpload(ctx.chat.id, retailerName, fileId);
+    await handleImageUpload(chatId, retailerName, fileId);
 });
 
 // Handle document uploads
@@ -54,9 +63,33 @@ bot.on('document', (ctx) => {
 async function handleImageUpload(chatId, retailerName, fileId) {
     try {
         const fileLink = await bot.telegram.getFileLink(fileId);
-        // Here you would typically download the file and upload it to your storage
         console.log(`File link for ${retailerName}: ${fileLink}`);
-        await bot.telegram.sendMessage(chatId, `Image uploaded for retailer: ${retailerName}`);
+
+        // Simulate saving image (replace with your actual logic)
+        // For example, save it to a local directory
+        const downloadDir = './images';
+        const downloadPath = `${downloadDir}/${fileId}.jpg`;
+        
+        // Ensure the download directory exists
+        if (!fs.existsSync(downloadDir)) {
+            fs.mkdirSync(downloadDir);
+        }
+
+        // Download the file from Telegram
+        const file = fs.createWriteStream(downloadPath);
+        https.get(fileLink.href, function(response) {
+            response.pipe(file);
+            file.on('finish', function() {
+                file.close();
+                console.log('File downloaded successfully');
+
+                // Notify user of successful upload
+                bot.telegram.sendMessage(chatId, `Image uploaded for retailer: ${retailerName}`);
+            });
+        }).on('error', function(err) {
+            console.error('Error downloading file:', err);
+            bot.telegram.sendMessage(chatId, 'Sorry, there was an error uploading the image.');
+        });
     } catch (error) {
         console.error('Error handling image upload:', error);
         await bot.telegram.sendMessage(chatId, 'Sorry, there was an error uploading the image.');
