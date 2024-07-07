@@ -19,6 +19,12 @@ app.post(`/bot${BOT_TOKEN}`, (req, res) => {
     res.sendStatus(200);
 });
 
+// Logging middleware
+bot.use((ctx, next) => {
+    console.log('Received update:', ctx.update);
+    return next();
+});
+
 // Start bot commands and interactions
 bot.start((ctx) => {
     ctx.reply('Welcome! Please type the retailer name.');
@@ -27,40 +33,48 @@ bot.start((ctx) => {
 // Handle messages containing retailer name
 bot.on('text', (ctx) => {
     const retailerName = ctx.message.text;
-
-    // Store retailerName in your database or session
     console.log(`Received retailer name: ${retailerName} from chat ID: ${ctx.chat.id}`);
-
-    // Prompt user to upload images (or simulate upload)
-    ctx.reply(`Retailer name '${retailerName}' received. Please upload images for this retailer.`);
-
-    // Example: Simulate image received (adjust as per your logic)
-    simulateImageReceived(ctx.chat.id, retailerName);
+    ctx.reply(`Retailer name '${retailerName}' received. Please upload an image for this retailer.`);
+    // Store retailerName in your database or session here
 });
 
-// Simulate receiving an image (replace with actual logic)
-function simulateImageReceived(chatId, retailerName) {
-    // Simulate uploading an image (replace with actual upload logic)
-    setTimeout(() => {
-        const imageUrl = 'https://example.com/image.jpg'; // Example image URL
-        // Display image or store in cloud storage (MEGA, etc.)
-        bot.telegram.sendPhoto(chatId, imageUrl, { caption: `Image uploaded for retailer: ${retailerName}` });
-    }, 2000); // Simulate delay
-}
+// Handle photo uploads
+bot.on('photo', async (ctx) => {
+    const retailerName = 'LastRetailerName'; // You'll need to implement a way to store and retrieve this
+    const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
+    await handleImageUpload(ctx.chat.id, retailerName, fileId);
+});
 
-// Example function to send messages via Telegram Bot API
-async function sendMessage(chatId, text) {
+// Handle document uploads
+bot.on('document', (ctx) => {
+    ctx.reply('Received a document! Please upload images as photos, not documents.');
+});
+
+// Function to handle image uploads
+async function handleImageUpload(chatId, retailerName, fileId) {
     try {
-        await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-            chat_id: chatId,
-            text: text
-        });
+        const fileLink = await bot.telegram.getFileLink(fileId);
+        // Here you would typically download the file and upload it to your storage
+        console.log(`File link for ${retailerName}: ${fileLink}`);
+        await bot.telegram.sendMessage(chatId, `Image uploaded for retailer: ${retailerName}`);
     } catch (error) {
-        console.error('Error sending message:', error);
+        console.error('Error handling image upload:', error);
+        await bot.telegram.sendMessage(chatId, 'Sorry, there was an error uploading the image.');
     }
 }
+
+// Error handling
+bot.catch((err, ctx) => {
+    console.error(`Error for ${ctx.updateType}`, err);
+});
 
 // Start server
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
+// Set up the bot to use webhooks (if you have a public HTTPS URL)
+// bot.telegram.setWebhook(`https://your-domain.com/bot${BOT_TOKEN}`);
+
+// OR use long polling (easier for local development)
+bot.launch();
