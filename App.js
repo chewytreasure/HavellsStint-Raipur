@@ -1,21 +1,19 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const { Telegraf } = require('telegraf');
-const path = require('path');
-const fs = require('fs/promises'); // Using fs.promises for async file operations
+const axios = require('axios');
+const { Telegraf, Markup } = require('telegraf');
+const https = require('https');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const BOT_TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN';
+const BOT_TOKEN = '7253315958:AAGDBGD28J0_Ud5-ruVbQhgI3xBp7qhdIPY';
 
 // Initialize Telegram bot
 const bot = new Telegraf(BOT_TOKEN);
 
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
-
-// Serve static files (images)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Endpoint to receive updates from Telegram webhook
 app.post(`/bot${BOT_TOKEN}`, (req, res) => {
@@ -35,47 +33,60 @@ bot.start((ctx) => {
 });
 
 // Handle messages containing retailer name
+let retailerNames = {}; // Store retailer names by chat ID
 bot.on('text', (ctx) => {
+    const chatId = ctx.chat.id;
     const retailerName = ctx.message.text;
-    console.log(`Received retailer name: ${retailerName} from chat ID: ${ctx.chat.id}`);
+    retailerNames[chatId] = retailerName;
+    console.log(`Received retailer name: ${retailerName} from chat ID: ${chatId}`);
     ctx.reply(`Retailer name '${retailerName}' received. Please upload an image for this retailer.`);
-    // Store retailerName in your database or session here
 });
 
 // Handle photo uploads
 bot.on('photo', async (ctx) => {
-    const retailerName = 'LastRetailerName'; // You'll need to implement a way to store and retrieve this
+    const chatId = ctx.chat.id;
+    const retailerName = retailerNames[chatId];
+    if (!retailerName) {
+        ctx.reply('Please enter the retailer name first.');
+        return;
+    }
     const fileId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
-    const fileLink = await bot.telegram.getFileLink(fileId);
-    await handleImageUpload(ctx.chat.id, retailerName, fileLink);
+    await handleImageUpload(chatId, retailerName, fileId);
+});
+
+// Handle document uploads
+bot.on('document', (ctx) => {
+    ctx.reply('Received a document! Please upload images as photos, not documents.');
 });
 
 // Function to handle image uploads
-async function handleImageUpload(chatId, retailerName, fileLink) {
+async function handleImageUpload(chatId, retailerName, fileId) {
     try {
-        const timestamp = Date.now(); // Use timestamp to make filename unique
-        const fileExtension = path.extname(fileLink);
-        const filename = `${retailerName}-${timestamp}${fileExtension}`;
-        const destination = path.join(__dirname, 'uploads', filename);
+        const fileLink = await bot.telegram.getFileLink(fileId);
+        console.log(`File link for ${retailerName}: ${fileLink}`);
 
-        // Download the file from Telegram and save it locally
-        const response = await axios({
-            method: 'GET',
-            url: fileLink,
-            responseType: 'stream',
-        });
+        // Simulate saving image (replace with your actual logic)
+        // For example, save it to a local directory
+        const downloadDir = './images';
+        const downloadPath = `${downloadDir}/${fileId}.jpg`;
+        
+        // Ensure the download directory exists
+        if (!fs.existsSync(downloadDir)) {
+            fs.mkdirSync(downloadDir);
+        }
 
-        const writer = fs.createWriteStream(destination);
-        response.data.pipe(writer);
+        // Download the file from Telegram
+        const file = fs.createWriteStream(downloadPath);
+        https.get(fileLink.href, function(response) {
+            response.pipe(file);
+            file.on('finish', function() {
+                file.close();
+                console.log('File downloaded successfully');
 
-        // Event on finish of download
-        writer.on('finish', async () => {
-            console.log(`File downloaded successfully: ${filename}`);
-            await bot.telegram.sendMessage(chatId, `Image uploaded for retailer: ${retailerName}`);
-        });
-
-        // Event on error during download
-        writer.on('error', (err) => {
+                // Notify user of successful upload
+                bot.telegram.sendMessage(chatId, `Image uploaded for retailer: ${retailerName}`);
+            });
+        }).on('error', function(err) {
             console.error('Error downloading file:', err);
             bot.telegram.sendMessage(chatId, 'Sorry, there was an error uploading the image.');
         });
